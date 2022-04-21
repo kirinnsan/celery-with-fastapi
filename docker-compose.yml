@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+
+  web:
+    build: ./sample-app
+    ports:
+      - 8080:80
+    volumes:
+      - ./sample-app:/usr/src/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  worker:
+    build: ./sample-app
+    command: celery worker --app=worker.celery --loglevel=info --logfile=logs/celery.log
+    volumes:
+      - ./sample-app:/usr/src/app
+    env_file:
+      - .env
+    depends_on:
+      - web
+      - redis
+
+  redis:
+    image: redis:6-alpine
+
+  dashboard:
+    build: ./sample-app
+    command:  flower --app=worker.celery --port=5555 --broker=redis://redis:6379/0
+    ports:
+      - 5556:5555
+    env_file:
+      - .env
+    depends_on:
+      - web
+      - redis
+      - worker
